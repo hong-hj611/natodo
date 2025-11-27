@@ -2,15 +2,11 @@
   "expo": {
     "name": "test02",
     "slug": "test02",
-<<<<<<< HEAD
     "platforms": [
       "ios",
       "android",
       "web"
     ],
-=======
-    "platforms" : ["ios", "android", "web"],
->>>>>>> c49fd2dfad8f68ec9c1282328b86661286ff282f
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -29,7 +25,6 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-<<<<<<< HEAD
       "edgeToEdgeEnabled": true,
       "package": "com.lluvia12.test02"
     },
@@ -42,12 +37,5 @@
       }
     },
     "owner": "lluvia12"
-=======
-      "edgeToEdgeEnabled": true
-    },
-    "web": {
-      "favicon": "./assets/favicon.png"
-    }
->>>>>>> c49fd2dfad8f68ec9c1282328b86661286ff282f
   }
 }
