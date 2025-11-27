@@ -1,7 +1,12 @@
 {
   "expo": {
-    "name": "mytodo",
-    "slug": "mytodo",
+    "name": "test02",
+    "slug": "test02",
+    "platforms": [
+      "ios",
+      "android",
+      "web"
+    ],
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -20,10 +25,17 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "package": "com.lluvia12.test02"
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "ee8ace48-ebbb-4fbc-bac9-c2ab1be9b2c4"
+      }
+    },
+    "owner": "lluvia12"
   }
 }
