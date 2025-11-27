@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "test02",
+    "name": "mytodo",
     "slug": "test02",
     "platforms": [
       "ios",
@@ -26,7 +26,7 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.lluvia12.test02"
+      "package": "com.lluvia12.mytodo"
     },
     "web": {
       "favicon": "./assets/favicon.png"

@@ -1,16 +1,18 @@
 import React, {useState} from 'react'
-import { StyleSheet, Text, View, TextInput, Platform, Image, FlatList, Pressable } from 'react-native';
+import { StyleSheet, Text, View, TextInput, Platform, Image, FlatList, Pressable, Modal } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker'
 import * as ImagePicker from 'expo-image-picker'
 //npx expo install expo-image-picker 설치 필요함
 
 export default function App() {
-  const [text, setText] = useState('')
-  const [todos, setTodos] = useState([])
-
+  const [text, setText] = useState('');  // 입력 값
+  const [todos, setTodos] = useState([]);  // 할일
+  const [editTodo, setEditTodo] = useState(null);  // 수정
   const [date, setDate] = useState( new Date()) // 현재날짜 기초값 
   const [showPicker, setShowPicker] = useState(false) // 피커보여주기
   const [photo, setPhoto] = useState(null) // 사진 보여주기
+
+  
 
   // 날짜 형식 만들기
   const formatDate = (d) =>{
@@ -86,6 +88,13 @@ export default function App() {
     if (chdate) setDate(chdate);
   }
 
+  // 수정하기
+  const saveEditedTodo = () => {
+    if (!editTodo) return;
+    setTodos(prev => prev.map(item => item.id === editTodo.id ? editTodo : item) );
+    setEditTodo(null);
+  };
+  
   return (
     <View style={styles.container}>
       
@@ -149,13 +158,15 @@ export default function App() {
         ListEmptyComponent={<Text style={{marginTop:20}}>할 일이 없습니다 😄</Text>}
         contentContainerStyle={{padding: 10}}
         renderItem={({item, index}) => (
-          <Pressable onLongPress={() => removeTodo(item.id)}>
             <View style={styles.todoCard}>
               {/* uri와 require의 목록을 다 적용하도록 */}
               {item.photo && (
                 <Image 
-                  source={item.photo}
-                  // source={{ uri: item.photo }} 
+                  source={
+                    typeof item.photo === 'string'
+                      ? { uri: item.photo }
+                      : item.photo     // require일 때
+                  }
                   style={styles.todoImage}
                 />
               )}
@@ -164,13 +175,70 @@ export default function App() {
                 <Text style={styles.todoIndex}>#{index + 1}</Text>
                 <Text style={styles.todoTitle}>{item.title}</Text>
                 <Text style={styles.todoDate}>{item.date}</Text>
-                <Text style={styles.todoDelete}>길게 눌러 삭제</Text>
-              </View>
 
+                <View style={styles.btnBox}>
+                  <Pressable onLongPress={() => removeTodo(item.id)} style={[styles.btns, styles.todoDelete]}>
+                    <Text>길게 눌러 삭제</Text>
+                  </Pressable>
+                  <Pressable onPress={() => setEditTodo(item)} style={[styles.btns, styles.todoEdit]}>
+                    <Text>수정하기</Text>
+                  </Pressable>                
+                </View>
+
+              </View>
             </View>
-          </Pressable>
         )}
       />
+
+      {/* modal- 수정화면 */}
+      <Modal 
+        visible={!!editTodo}  // 모달이 보일지 말지 결정(boolean)-> !!editTodo null이면 true
+        animationType="slide"  // 애니메이션 효과 (slide/fade)
+        transparent={true} // 모달 배경 투명도
+      >
+        <View style={styles.modalWrap}>
+          <View style={styles.modalBox}>
+            
+            <Text style={styles.modalTitle}>할 일 수정</Text>
+
+            <TextInput
+              style={styles.input}
+              value={editTodo?.title}
+              onChangeText={(text) =>
+                setEditTodo({...editTodo, title: text})
+              }
+            />
+
+            <TextInput
+              style={styles.input}
+              value={editTodo?.date}
+              onChangeText={(text) =>
+                setEditTodo({...editTodo, date: text})
+              }
+            />
+
+            {/* 이미지 변경 버튼도 가능 */}
+            {/* 나중에 원하면 추가해줄게 */}
+
+            <View style={styles.row}>
+              <Pressable 
+                style={styles.cancelBtn}
+                onPress={() => setEditTodo(null)}
+              >
+                <Text>취소</Text>
+              </Pressable>
+
+              <Pressable 
+                style={styles.saveBtn}
+                onPress={saveEditedTodo}
+              >
+                <Text style={{color: '#fff'}}>저장</Text>
+              </Pressable>
+            </View>
+
+          </View>
+        </View>
+      </Modal>
 
     </View>
   );
@@ -210,7 +278,7 @@ const styles = StyleSheet.create({
   },
   row: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexWrap: 'no-wrap',
     marginBottom: 10,
   },
   smallBtn: {
@@ -286,4 +354,26 @@ const styles = StyleSheet.create({
     color: '#B22222',
     fontSize: 12,
   },
+  todoEdit: {
+    color: '#223cb2ff',
+    fontSize: 12,
+  },
+  btnBox: {
+    flexDirection: 'row',
+    
+  },
+  btns: {
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+    borderRadius: 5,
+    borderWidth: 1,
+    borderColor: '#ccc',
+    marginRight: 5
+  },
+  modalWrap: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)' },
+  modalBox: { width: '90%', backgroundColor: '#fff', borderRadius: 15, padding: 20 },
+  modalTitle: { fontSize: 20, fontWeight: '700', marginBottom: 15 },
+  cancelBtn: { flex: 1, backgroundColor: '#ccc', padding: 10, borderRadius: 10, marginRight: 10, alignItems: 'center' },
+  saveBtn: { flex: 1, backgroundColor: '#2E8B57', padding: 10, borderRadius: 10, alignItems: 'center'},
+
 });
