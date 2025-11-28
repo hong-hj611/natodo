@@ -1,18 +1,27 @@
-import React, {useState} from 'react'
+import React, { useState, useEffect } from 'react';
+import { Alert as RNAlert } from 'react-native';
 import { StyleSheet, Text, View, TextInput, Platform, Image, FlatList, Pressable, Modal } from 'react-native';
-import DateTimePicker from '@react-native-community/datetimepicker'
-import * as ImagePicker from 'expo-image-picker'
+import DateTimePicker from '@react-native-community/datetimepicker';
+import * as ImagePicker from 'expo-image-picker';
 //npx expo install expo-image-picker 설치 필요함
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+const STORAGE_KEY = 'MY_LIST_V1';
+// AsyncStorage.setItem(STORAGE_KEY, data) 형식, 저장 변수
 
 export default function App() {
   const [text, setText] = useState('');  // 입력 값
   const [todos, setTodos] = useState([]);  // 할일
   const [editTodo, setEditTodo] = useState(null);  // 수정
-  const [date, setDate] = useState( new Date()) // 현재날짜 기초값 
-  const [showPicker, setShowPicker] = useState(false) // 피커보여주기
-  const [photo, setPhoto] = useState(null) // 사진 보여주기
+  const [date, setDate] = useState( new Date()); // 현재날짜 기초값 
+  const [showPicker, setShowPicker] = useState(false); // 피커보여주기
+  const [photo, setPhoto] = useState(null); // 사진 보여주기
+  const [isLoading, setIsloading] = useState(false);
+  // 로딩 여부 확인을 위해 추가함
 
-  
+  useEffect( () => {
+    load();   // 처음 한번 load함
+  },[])
 
   // 날짜 형식 만들기
   const formatDate = (d) =>{
@@ -21,6 +30,7 @@ export default function App() {
     const day = String(d.getDate()).padStart(2, '0')
     return `${y}-${m}-${day}` // 날짜 형식 맞추어서 리턴
   }
+
   // 카메라로 사진을 찍기
   const getPhoto = async () => {
     //카메라로 사진찍은걸 가져온다. 그중에 상태 status만 가져온다
@@ -41,6 +51,7 @@ export default function App() {
     const uri = result.assets[0].uri;
     setPhoto(uri);
   }
+
   // 갤러리에서 사진 선택하기
   const getGallery = async () => {
     // 미디어보관함에서 사진을 가져오기 위해
@@ -61,7 +72,7 @@ export default function App() {
   }
 
   // 추가 버튼 구현
-  const addTodo = () =>{
+  const addTodo = async () =>{
     if (!text.trim()) return
 
     const newTodo = {
@@ -72,14 +83,60 @@ export default function App() {
       // 키와 키값의 이름이 동일할 때는 하나의 이름으로 써도 된다
       // 카메라, 갤러리 사용 안할 경우 noimage 자동 적용되도록
     }
-    setTodos([newTodo, ...todos]);
-    setText('');
-    setPhoto(null);
+    const newList = [newTodo, ...todos]     // 내용을 계속 담을거라 배열로 만듬, newItem에 담은 자료를
+    // newList = [1, 2] => [3]추가 => [3(newItem), 1, 2(...list)] 이해하기***
+
+    try {
+      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(newList))
+      // newList를 json 파일로 전환시켜서 전송해주세요*** (저장)
+      setTodos(newList); // 업데이트 (완전히 지우면 안되므로 지금까지의 내용이 담긴 newList를 넣어준다)
+      setText('');     // 초기화
+      setPhoto(null);  // 초기화
+    }catch (e) {
+      console.log('저장 중 오류 발생', e)
+    }
   }
+
+  // 불러오기
+  const load = async () => {
+    try {
+      const data = await AsyncStorage.getItem(STORAGE_KEY);
+      // JSON 파일로 만들어진 저장소의 데이터를 가지고 와라
+      if (data !== null) {
+        const arr  = JSON.parse(data);
+        if(Array.isArray(arr)) {  // 받아온 파일이 배열인지 확인하여 맞으면 넣기
+          setTodos(arr);
+        }
+      }
+    }catch (e) {
+      console.log('로딩 오류...', e)
+    }finally {
+      setIsloading(true)
+    }
+  }
+
+  // 삭제 전 동의 구하기
+  const confirmDelete = (id) => {
+    RNAlert.alert(
+      "삭제하시겠어요?", "이 작업은 되돌릴 수 없습니다.", 
+      [ {text: "취소", style: "cancel"}, {text: "삭제", style: "destuctive", onPress: () => removeTodo(id)} ]
+    );
+  };
+
   // 삭제 버튼 구현
-  const removeTodo = (id)=>{
-    setTodos(todos.filter(item => item.id !== id))
+  const removeTodo = async (id)=>{
+    const newList = todos.filter(item => item.id !== id);
+    // 선택한 id와 같지 않은 것만 필터링해서 새로 만들어주세요
+
+    // 삭제 후 다시저장하기
+    try {
+      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(newList))
+      setTodos(newList)
+    }catch (e) {
+      console.log('삭제중 오류', e)
+    }
   }
+
   // 날짜 변경시 이벤트 함수
   const changeDate = (e, chdate ) =>{
     if (Platform.OS === 'android'){
@@ -89,9 +146,17 @@ export default function App() {
   }
 
   // 수정하기
-  const saveEditedTodo = () => {
+  const saveEditedTodo = async () => {
     if (!editTodo) return;
-    setTodos(prev => prev.map(item => item.id === editTodo.id ? editTodo : item) );
+    const newList = todos.map(item => item.id === editTodo.id ? editTodo : item);
+    
+    // 수정 후 다시저장하기
+    try {
+      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(newList))
+      setTodos(newList)
+    }catch (e) {
+      console.log('수정중 오류', e)
+    }
     setEditTodo(null);
   };
   
@@ -177,11 +242,11 @@ export default function App() {
                 <Text style={styles.todoDate}>{item.date}</Text>
 
                 <View style={styles.btnBox}>
-                  <Pressable onLongPress={() => removeTodo(item.id)} style={[styles.btns, styles.todoDelete]}>
-                    <Text>길게 눌러 삭제</Text>
+                  <Pressable onPress={() => confirmDelete(item.id)} style={[styles.btns, styles.todoDelete]}>
+                    <Text>삭제</Text>
                   </Pressable>
                   <Pressable onPress={() => setEditTodo(item)} style={[styles.btns, styles.todoEdit]}>
-                    <Text>수정하기</Text>
+                    <Text>수정</Text>
                   </Pressable>                
                 </View>
 
@@ -218,7 +283,6 @@ export default function App() {
             />
 
             {/* 이미지 변경 버튼도 가능 */}
-            {/* 나중에 원하면 추가해줄게 */}
 
             <View style={styles.row}>
               <Pressable 
@@ -342,7 +406,7 @@ const styles = StyleSheet.create({
     color: '#2A6F2A',
   },
   todoTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '700',
     marginVertical: 2,
   },
@@ -350,26 +414,25 @@ const styles = StyleSheet.create({
     color: '#666',
     marginBottom: 4,
   },
-  todoDelete: {
-    color: '#B22222',
-    fontSize: 12,
-  },
-  todoEdit: {
-    color: '#223cb2ff',
-    fontSize: 12,
-  },
   btnBox: {
     flexDirection: 'row',
-    
   },
   btns: {
     paddingVertical: 5,
-    paddingHorizontal: 10,
-    borderRadius: 5,
-    borderWidth: 1,
-    borderColor: '#ccc',
-    marginRight: 5
+    paddingHorizontal: 15,
+    borderRadius: 10,
+    borderWidth: 2,
+    marginRight: 7,
   },
+  todoDelete: {
+    borderColor: '#B22222',
+    fontSize: 12,
+  },
+  todoEdit: {
+    borderColor: '#223cb2ff',
+    fontSize: 12,
+  },
+  // 모달
   modalWrap: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)' },
   modalBox: { width: '90%', backgroundColor: '#fff', borderRadius: 15, padding: 20 },
   modalTitle: { fontSize: 20, fontWeight: '700', marginBottom: 15 },
